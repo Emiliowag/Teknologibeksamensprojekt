@@ -1,11 +1,47 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="da">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Studieoverblik</title>
+  <link rel="stylesheet" href="./frontpage/styles.css">
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+
 </head>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+
 <body>
-    
+  <header>
+    <h1>Mit Studieoverblik</h1>
+  </header>
+
+  <main>
+    <section id="add-task">
+      <h2>Tilføj opgave</h2>
+      <input type="text" id="title" placeholder="Overskrift">
+      <input type="number" id="hours" placeholder="Elevtimer">
+      <input type="date" id="deadline">
+      <button onclick="addTask()">Tilføj</button>
+    </section>
+
+    <section id="calendar">
+        <h2>Kalender og opgaver</h2>
+        <div id="calendar-view"></div>
+        <div id="task-list"></div>
+        
+    </section>
+  </main>
+
+  <div id="task-modal" class="modal hidden">
+    <div class="modal-content">
+      <span id="modal-title"></span><br>
+      <label for="modal-hours">Timer brugt:</label>
+      <input type="number" id="modal-hours"><br>
+      <button id="modal-save">Gem</button>
+      <button id="modal-close">Luk</button>
+    </div>
+  </div>
+
+  <script src="./frontpage/script.js"></script>
 </body>
 </html>
