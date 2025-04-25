@@ -70,3 +70,21 @@ body {
     max-width: 400px;
   }
   
+  #task-deadline-list {
+    background: #f9f9f9;
+    padding: 1rem;
+    border-radius: 8px;
+    max-width: 300px;
+  }
+  
+  #task-deadline-list ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  #task-deadline-list li {
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 0.5rem;
+  }
+  

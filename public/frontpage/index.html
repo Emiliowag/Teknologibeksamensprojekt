@@ -16,28 +16,58 @@
   </header>
 
   <main>
-    <section id="add-task">
-      <h2>Tilføj opgave</h2>
-      <input type="text" id="title" placeholder="Overskrift">
-      <input type="number" id="hours" placeholder="Elevtimer">
-      <input type="date" id="deadline">
-      <button onclick="addTask()">Tilføj</button>
+    <section id="form-section">
+      <h2>Tilføj</h2>
+    
+      <label for="entry-type">Type:</label>
+      <select id="entry-type">
+        <option value="task">Opgave</option>
+        <option value="activity">Aktivitet</option>
+      </select>
+    
+      <div id="task-fields">
+        <label for="task-title">Titel:</label>
+        <input type="text" id="task-title"><br>
+        <label for="task-deadline">Deadline:</label>
+        <input type="date" id="task-deadline"><br>
+        <label for="task-hours">Elevtimer:</label>
+        <input type="number" id="task-hours"><br>
+      </div>
+    
+      <div id="activity-fields" style="display: none;">
+        <label for="activity-title">Titel:</label>
+        <input type="text" id="activity-title"><br>
+        <label for="activity-date">Dato:</label>
+        <input type="date" id="activity-date"><br>
+        <label for="activity-start">Start:</label>
+        <input type="time" id="activity-start"><br>
+        <label for="activity-end">Slut:</label>
+        <input type="time" id="activity-end"><br>
+      </div>
+    
+      <button onclick="addEntry()">Tilføj</button>
     </section>
 
+    <section id="task-deadline-list">
+      <h3>Kommende opgaver</h3>
+      <ul id="task-deadlines"></ul>
+    </section>
+    
     <section id="calendar">
         <h2>Kalender og opgaver</h2>
         <div id="calendar-view"></div>
-        <div id="task-list"></div>
-        
+          
     </section>
   </main>
 
   <div id="task-modal" class="modal hidden">
     <div class="modal-content">
-      <span id="modal-title"></span><br>
+      <h3 id="modal-title"></h3>
+      <p id="modal-hours-left"></p>
       <label for="modal-hours">Timer brugt:</label>
-      <input type="number" id="modal-hours"><br>
+      <input type="number" id="modal-hours"><br><br>
       <button id="modal-save">Gem</button>
+      <button id="modal-complete">Markér som afleveret</button>
       <button id="modal-close">Luk</button>
     </div>
   </div>

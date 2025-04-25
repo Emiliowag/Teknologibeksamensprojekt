@@ -1,65 +1,67 @@
 let tasks = [];
 
-function addTask() {
-    const title = document.getElementById('title').value;
-    const hours = parseFloat(document.getElementById('hours').value);
-    const deadline = document.getElementById('deadline').value;
+function addEntry() {
+  const type = document.getElementById('entry-type').value;
 
-    if (!title || isNaN(hours) || !deadline) {
-        alert("Udfyld alle felter.");
-        return;
-    }
+  if (type === 'task') {
+    const title = document.getElementById('task-title').value;
+    const deadline = document.getElementById('task-deadline').value;
+    const hours = parseFloat(document.getElementById('task-hours').value);
+    if (!title || !deadline || isNaN(hours)) return;
 
-    const task = {
-        title,
-        hours,
-        deadline,
-        spentHours: 0,
-        completed: false
-    };
-
-    tasks.push(task);
-    renderTasks();
-    updateCalendar();
-}
-
-function renderTasks() {
-    const list = document.getElementById('task-list');
-    list.innerHTML = '';
-
-
-    tasks.forEach((task, index) => {
-        const div = document.createElement('div');
-        div.className = 'task';
-        div.id = "task"
-        div.innerHTML = `
-      <strong>${task.title}</strong><br>
-      Deadline: ${task.deadline}<br>
-      Timer tilbage: ${task.hours - task.spentHours}<br>
-      <button onclick="markCompleted(${index})">${task.completed ? 'Afleveret' : 'Markér som afleveret'}</button>
-      ${task.completed 
-        ? '<em>færdig</em>' 
-        : `<input type="number" value="${task.spentHours}" oninput="updateSpentHours(${index}, this.value)">`}
-    `;
-        list.appendChild(div);
+    tasks.push({
+      type: 'task',
+      title,
+      deadline,
+      hours,
+      spentHours: 0,
+      completed: false
     });
+
+  } else if (type === 'activity') {
+    const title = document.getElementById('activity-title').value;
+    const date = document.getElementById('activity-date').value;
+    const start = document.getElementById('activity-start').value;
+    const end = document.getElementById('activity-end').value;
+    if (!title || !date || !start || !end) return;
+
+    tasks.push({
+      type: 'activity',
+      title,
+      start: `${date}T${start}`,
+      end: `${date}T${end}`
+    });
+  }
+
+  updateCalendar();
+  renderTaskList();
 }
 
 function updateSpentHours(index, value) {
-    const hours = parseFloat(value);
-    if (!isNaN(hours)) {
-        tasks[index].spentHours = hours;
-        renderTasks();
-        updateCalendar();
-    }
+  const hours = parseFloat(value);
+  if (!isNaN(hours)) {
+    tasks[index].spentHours = hours;
+    updateCalendar();
+    renderTaskList();
+  }
 }
 
 function markCompleted(index) {
-    tasks[index].completed = !tasks[index].completed;
+  const task = tasks[index];
+  
+  // Fjern alle tidligere oprettede lektieaktiviteter for denne opgave
+  tasks = tasks.filter(t => !(t.type === 'activity' && t.generatedForTask === task.title));
+  
+  // Markér opgaven som afsluttet
+  task.completed = true;
 
-    renderTasks();
-    updateCalendar();
+  // Opdater kalenderen
+  updateCalendar();
+
+  // Genberegn lektieaktiviteter (skal ikke ske, hvis allerede afsluttet)
+  scheduleHomework();
 }
+
 
 let calendar;
 
@@ -75,48 +77,229 @@ document.addEventListener('DOMContentLoaded', function () {
     },
     events: [],
     eventClick: function(info) {
-        const taskTitle = info.event.title.split(' (')[0];
-        const taskIndex = tasks.findIndex(t => t.title === taskTitle && t.deadline === info.event.startStr);
-        if (taskIndex === -1) return;
-    
-        openModal(taskIndex);
-      }
+      const taskTitle = info.event.title.split(' (')[0];
+      const taskIndex = tasks.findIndex(t => t.title === taskTitle && t.deadline === info.event.startStr);
+      if (taskIndex === -1) return;
+      openModal(taskIndex);
+    }
   });
   calendar.render();
+  renderTaskList();
+  addEntry();
+  scheduleHomework();
 });
 
 function updateCalendar() {
+  if (!calendar) return;
   calendar.removeAllEvents();
+
   tasks.forEach(task => {
-    calendar.addEvent({
-      title: `${task.title} (${task.hours}t)`,
-      start: task.deadline,
-      color: task.completed ? 'green' : '#4a90e2'
-    });
+    if (task.type === 'task') {
+      calendar.addEvent({
+        title: `${task.title} (${task.hours}t)`,
+        start: task.deadline,
+        color: task.completed ? 'green' : '#4a90e2'
+      });
+    } else if (task.type === 'activity') {
+      calendar.addEvent({
+        title: task.title,
+        start: task.start,
+        end: task.end,
+        color: '#e67e22'
+      });
+    }
   });
 }
 
 function openModal(index) {
-    const modal = document.getElementById('task-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalInput = document.getElementById('modal-hours');
+  const modal = document.getElementById('task-modal');
+  const titleEl = document.getElementById('modal-title');
+  const inputEl = document.getElementById('modal-hours');
+  const leftEl = document.getElementById('modal-hours-left');
+  const completeBtn = document.getElementById('modal-complete');
+
+  const task = tasks[index];
+
+  titleEl.textContent = task.title;
+  inputEl.value = task.spentHours;
+  leftEl.textContent = `Timer tilbage: ${Math.max(0, task.hours - task.spentHours)}`;
+  completeBtn.style.display = task.completed ? 'none' : 'inline-block';
+
+  modal.classList.remove('hidden');
+
+  document.getElementById('modal-save').onclick = () => {
+    const newHours = parseFloat(inputEl.value);
+    if (!isNaN(newHours) && newHours >= 0) {
+      task.spentHours = newHours;
+      
+      // Fjern eksisterende lektieaktiviteter for opgaven
+      tasks = tasks.filter(t =>
+        !(t.type === 'activity' && t.generatedForTask === task.title)
+      );
   
-    modalTitle.textContent = tasks[index].title;
-    modalInput.value = tasks[index].spentHours;
-    modal.classList.remove('hidden');
+      updateCalendar();
+      scheduleHomework(); // ← nu ok at lægge dem ind igen
+    }
+    modal.classList.add('hidden');
+  };
   
-    document.getElementById('modal-save').onclick = () => {
-      const newHours = parseFloat(modalInput.value);
-      if (!isNaN(newHours) && newHours >= 0) {
-        tasks[index].spentHours = newHours;
-        renderTasks();
-        updateCalendar();
+  
+
+  document.getElementById('modal-complete').onclick = () => {
+    task.completed = true;
+    modal.classList.add('hidden');
+    updateCalendar();
+    renderTaskList();
+    addEntry();
+    scheduleHomework();
+  };
+
+  document.getElementById('modal-close').onclick = () => {
+    modal.classList.add('hidden');
+  };
+}
+
+document.getElementById('entry-type').addEventListener('change', function () {
+  const isTask = this.value === 'task';
+  document.getElementById('task-fields').style.display = isTask ? 'block' : 'none';
+  document.getElementById('activity-fields').style.display = isTask ? 'none' : 'block';
+});
+
+function renderTaskList() {
+  const listEl = document.getElementById('task-deadlines');
+  if (!listEl) return;
+
+  listEl.innerHTML = '';
+
+  const upcomingTasks = tasks
+    .filter(t => t.type === 'task' && !t.completed)
+    .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+
+  upcomingTasks.forEach(task => {
+    const li = document.createElement('li');
+    li.textContent = `${task.title} – ${task.deadline}`;
+    listEl.appendChild(li);
+  });
+}
+function scheduleHomework() {
+  // Fjern tidligere lektie-aktiviteter
+  const incompleteTitles = tasks
+  .filter(t => t.type === 'task' && !t.completed)
+  .map(t => t.title);
+
+// Fjern tidligere lektie-aktiviteter for uafsluttede opgaver
+tasks = tasks.filter(t => !(t.type === 'activity' && incompleteTitles.includes(t.generatedForTask)));
+
+
+  const now = new Date();
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
+
+  const dailySchoolStart = 8;
+  const dailySchoolEnd = 15.5;
+  const sleepTime = 22;
+
+  const getDateString = (date) => date.toISOString().split('T')[0];
+
+  tasks
+    .filter(task => task.type === 'task' && !task.completed)
+    .forEach(task => {
+      const deadline = new Date(task.deadline);
+      const days = [];
+
+      // Saml ledige timer per dag
+      for (let d = new Date(); d <= deadline; d.setDate(d.getDate() + 1)) {
+        const dateStr = getDateString(d);
+        const dayStart = new Date(`${dateStr}T00:00`);
+        const lektieStart = new Date(`${dateStr}T15:30`);
+        const lektieEnd = new Date(`${dateStr}T${sleepTime < 10 ? '0' : ''}${sleepTime}:00`);
+
+        // Find alle aktiviteter samme dag
+        const dailyBlocks = tasks
+          .filter(t => t.type === 'activity' &&
+            new Date(t.start).toDateString() === d.toDateString())
+          .map(t => ({
+            start: new Date(t.start),
+            end: new Date(t.end)
+          }));
+
+        // Tilføj skole som blok
+        dailyBlocks.push({
+          start: new Date(`${dateStr}T08:00`),
+          end: new Date(`${dateStr}T15:30`)
+        });
+
+        // Sorter og beregn fritid mellem 15:30 og 22:00
+        dailyBlocks.sort((a, b) => a.start - b.start);
+
+        const freeSlots = [];
+        let cursor = lektieStart;
+
+        for (const block of dailyBlocks) {
+          if (block.start > cursor && cursor < lektieEnd) {
+            freeSlots.push({
+              start: new Date(cursor),
+              end: new Date(Math.min(block.start, lektieEnd))
+            });
+          }
+          if (block.end > cursor) {
+            cursor = new Date(Math.max(cursor, block.end));
+          }
+        }
+
+        if (cursor < lektieEnd) {
+          freeSlots.push({
+            start: new Date(cursor),
+            end: lektieEnd
+          });
+        }
+
+        const availableMinutes = freeSlots.reduce((sum, slot) => {
+          return sum + (slot.end - slot.start) / (1000 * 60);
+        }, 0);
+
+        days.push({ date: new Date(d), freeSlots, availableMinutes });
       }
-      modal.classList.add('hidden');
-    };
-  
-    document.getElementById('modal-close').onclick = () => {
-      modal.classList.add('hidden');
-    };
-  }
-  
+
+      // Fordel timer over dagene
+      const totalMinutesNeeded = task.hours * 60;
+      const totalFree = days.reduce((sum, d) => sum + d.availableMinutes, 0);
+
+      if (totalFree < totalMinutesNeeded) {
+        alert(`Ikke nok tid til opgaven: ${task.title}`);
+        return;
+      }
+
+      let remaining = totalMinutesNeeded;
+
+      days.forEach(day => {
+        if (remaining <= 0) return;
+        const fraction = day.availableMinutes / totalFree;
+        let toAssign = Math.min(remaining, Math.round(totalMinutesNeeded * fraction));
+
+        for (const slot of day.freeSlots) {
+          if (toAssign <= 0) break;
+          const slotMinutes = (slot.end - slot.start) / (1000 * 60);
+          const used = Math.min(slotMinutes, toAssign);
+
+          if (used >= 15) { // minimum blok på 15 min
+            const start = new Date(slot.start);
+            const end = new Date(start.getTime() + used * 60 * 1000);
+
+            tasks.push({
+              type: 'activity',
+              title: `Lektie: ${task.title}`,
+              start: start.toISOString(),
+              end: end.toISOString(),
+              generatedForTask: task.title
+            });
+
+            toAssign -= used;
+            remaining -= used;
+          }
+        }
+      });
+    });
+
+  updateCalendar();
+}
