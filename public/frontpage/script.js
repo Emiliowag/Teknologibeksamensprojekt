@@ -49,15 +49,17 @@ function updateSpentHours(index, value) {
 
 function markCompleted(index) {
   const task = tasks[index];
-  
+
   tasks = tasks.filter(t => !(t.type === 'activity' && t.generatedForTask === task.title));
-  
+
   task.completed = true;
 
   updateCalendar();
-
-  scheduleHomework();
+  renderTaskList();
 }
+
+
+
 
 
 let calendar;
@@ -93,8 +95,10 @@ function updateCalendar() {
   tasks.forEach(task => {
     if (task.type === 'task') {
       calendar.addEvent({
+        id: task.title + task.deadline,
         title: `${task.title} (${task.hours}t)`,
         start: task.deadline,
+        allDay: true,
         color: task.completed ? 'green' : '#4a90e2'
       });
     } else if (task.type === 'activity') {
@@ -140,13 +144,18 @@ function openModal(index) {
   };
   
   document.getElementById('modal-complete').onclick = () => {
+    const task = tasks[index];
+
+    tasks = tasks.filter(t => !(t.type === 'activity' && t.generatedForTask === task.title));
+  
     task.completed = true;
+  
     modal.classList.add('hidden');
+  
     updateCalendar();
     renderTaskList();
-    addEntry();
-    scheduleHomework();
   };
+  
 
   document.getElementById('modal-close').onclick = () => {
     modal.classList.add('hidden');
@@ -178,115 +187,56 @@ function renderTaskList() {
 }
 
 function scheduleHomework() {
-  const incompleteTitles = tasks
-  .filter(t => t.type === 'task' && !t.completed)
-  .map(t => t.title);
+  tasks = tasks.filter(t => !(t.type === 'activity' && t.generatedForTask));
 
-    tasks = tasks.filter(t => !(t.type === 'activity' && incompleteTitles.includes(t.generatedForTask)));
-
-
-  const now = new Date();
-  const endOfToday = new Date(now);
-  endOfToday.setHours(23, 59, 59, 999);
-
-  const dailySchoolStart = 8;
-  const dailySchoolEnd = 15.5;
-  const sleepTime = 22;
-
-  const getDateString = (date) => date.toISOString().split('T')[0];
+  function hasActivity(dateStr) {
+    return tasks.some(t => 
+      t.type === 'activity' &&
+      t.start.startsWith(dateStr)
+    );
+  }
 
   tasks
     .filter(task => task.type === 'task' && !task.completed)
     .forEach(task => {
-      const deadline = new Date(task.deadline);
-      const days = [];
+      let hoursLeft = task.hours;
+      let currentDate = new Date(task.deadline);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-      for (let d = new Date(); d <= deadline; d.setDate(d.getDate() + 1)) {
-        const dateStr = getDateString(d);
-        const dayStart = new Date(`${dateStr}T00:00`);
-        const lektieStart = new Date(`${dateStr}T15:30`);
-        const lektieEnd = new Date(`${dateStr}T${sleepTime < 10 ? '0' : ''}${sleepTime}:00`);
+      const studyDays = [];
 
-        const dailyBlocks = tasks
-          .filter(t => t.type === 'activity' &&
-            new Date(t.start).toDateString() === d.toDateString())
-          .map(t => ({
-            start: new Date(t.start),
-            end: new Date(t.end)
-          }));
+      while (currentDate >= today) {
+        const dateStr = currentDate.toISOString().split('T')[0];
 
-        dailyBlocks.push({
-          start: new Date(`${dateStr}T08:00`),
-          end: new Date(`${dateStr}T15:30`)
-        });
-
-        dailyBlocks.sort((a, b) => a.start - b.start);
-
-        const freeSlots = [];
-        let cursor = lektieStart;
-
-        for (const block of dailyBlocks) {
-          if (block.start > cursor && cursor < lektieEnd) {
-            freeSlots.push({
-              start: new Date(cursor),
-              end: new Date(Math.min(block.start, lektieEnd))
-            });
-          }
-          if (block.end > cursor) {
-            cursor = new Date(Math.max(cursor, block.end));
-          }
+        if (!hasActivity(dateStr)) {
+          studyDays.push(new Date(currentDate));
         }
 
-        if (cursor < lektieEnd) {
-          freeSlots.push({
-            start: new Date(cursor),
-            end: lektieEnd
-          });
-        }
-
-        const availableMinutes = freeSlots.reduce((sum, slot) => {
-          return sum + (slot.end - slot.start) / (1000 * 60);
-        }, 0);
-
-        days.push({ date: new Date(d), freeSlots, availableMinutes });
+        currentDate.setDate(currentDate.getDate() - 1);
       }
 
-      const totalMinutesNeeded = task.hours * 60;
-      const totalFree = days.reduce((sum, d) => sum + d.availableMinutes, 0);
-
-      if (totalFree < totalMinutesNeeded) {
-        alert(`Ikke nok tid til opgaven: ${task.title}`);
+      if (studyDays.length === 0) {
+        alert(`Ingen ledige dage til at planlægge lektie for: ${task.title}`);
         return;
       }
 
-      let remaining = totalMinutesNeeded;
+      const hoursPerDay = hoursLeft / studyDays.length;
 
-      days.forEach(day => {
-        if (remaining <= 0) return;
-        const fraction = day.availableMinutes / totalFree;
-        let toAssign = Math.min(remaining, Math.round(totalMinutesNeeded * fraction));
+      studyDays.reverse();
 
-        for (const slot of day.freeSlots) {
-          if (toAssign <= 0) break;
-          const slotMinutes = (slot.end - slot.start) / (1000 * 60);
-          const used = Math.min(slotMinutes, toAssign);
+      studyDays.forEach(day => {
+        const dateStr = day.toISOString().split('T')[0];
+        const start = new Date(`${dateStr}T16:00`);
+        const end = new Date(start.getTime() + hoursPerDay * 60 * 60 * 1000);
 
-          if (used >= 15) {
-            const start = new Date(slot.start);
-            const end = new Date(start.getTime() + used * 60 * 1000);
-
-            tasks.push({
-              type: 'activity',
-              title: `Lektie: ${task.title}`,
-              start: start.toISOString(),
-              end: end.toISOString(),
-              generatedForTask: task.title
-            });
-
-            toAssign -= used;
-            remaining -= used;
-          }
-        }
+        tasks.push({
+          type: 'activity',
+          title: `Lektie: ${task.title}`,
+          start: start.toISOString(),
+          end: end.toISOString(),
+          generatedForTask: task.title
+        });
       });
     });
 
