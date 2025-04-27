@@ -7,8 +7,9 @@ function addEntry() {
     const title = document.getElementById('task-title').value;
     const deadline = document.getElementById('task-deadline').value;
     const hours = parseFloat(document.getElementById('task-hours').value);
-    if (!title || !deadline || isNaN(hours)) return;
-
+    if (!title || !deadline || isNaN(hours)) {
+        return;
+    }
     tasks.push({
       type: 'task',
       title,
@@ -23,8 +24,9 @@ function addEntry() {
     const date = document.getElementById('activity-date').value;
     const start = document.getElementById('activity-start').value;
     const end = document.getElementById('activity-end').value;
-    if (!title || !date || !start || !end) return;
-
+    if (!title || !date || !start || !end) {
+        return;
+    }
     tasks.push({
       type: 'activity',
       title,
@@ -32,7 +34,6 @@ function addEntry() {
       end: `${date}T${end}`
     });
   }
-
   updateCalendar();
   renderTaskList();
 }
@@ -49,16 +50,12 @@ function updateSpentHours(index, value) {
 function markCompleted(index) {
   const task = tasks[index];
   
-  // Fjern alle tidligere oprettede lektieaktiviteter for denne opgave
   tasks = tasks.filter(t => !(t.type === 'activity' && t.generatedForTask === task.title));
   
-  // Markér opgaven som afsluttet
   task.completed = true;
 
-  // Opdater kalenderen
   updateCalendar();
 
-  // Genberegn lektieaktiviteter (skal ikke ske, hvis allerede afsluttet)
   scheduleHomework();
 }
 
@@ -131,20 +128,17 @@ function openModal(index) {
     const newHours = parseFloat(inputEl.value);
     if (!isNaN(newHours) && newHours >= 0) {
       task.spentHours = newHours;
-      
-      // Fjern eksisterende lektieaktiviteter for opgaven
+
       tasks = tasks.filter(t =>
         !(t.type === 'activity' && t.generatedForTask === task.title)
       );
   
       updateCalendar();
-      scheduleHomework(); // ← nu ok at lægge dem ind igen
+      scheduleHomework();
     }
     modal.classList.add('hidden');
   };
   
-  
-
   document.getElementById('modal-complete').onclick = () => {
     task.completed = true;
     modal.classList.add('hidden');
@@ -167,8 +161,9 @@ document.getElementById('entry-type').addEventListener('change', function () {
 
 function renderTaskList() {
   const listEl = document.getElementById('task-deadlines');
-  if (!listEl) return;
-
+  if (!listEl) {
+    return;
+  }
   listEl.innerHTML = '';
 
   const upcomingTasks = tasks
@@ -177,18 +172,17 @@ function renderTaskList() {
 
   upcomingTasks.forEach(task => {
     const li = document.createElement('li');
-    li.textContent = `${task.title} – ${task.deadline}`;
+    li.textContent = `${task.title} - ${task.deadline}`;
     listEl.appendChild(li);
   });
 }
+
 function scheduleHomework() {
-  // Fjern tidligere lektie-aktiviteter
   const incompleteTitles = tasks
   .filter(t => t.type === 'task' && !t.completed)
   .map(t => t.title);
 
-// Fjern tidligere lektie-aktiviteter for uafsluttede opgaver
-tasks = tasks.filter(t => !(t.type === 'activity' && incompleteTitles.includes(t.generatedForTask)));
+    tasks = tasks.filter(t => !(t.type === 'activity' && incompleteTitles.includes(t.generatedForTask)));
 
 
   const now = new Date();
@@ -207,14 +201,12 @@ tasks = tasks.filter(t => !(t.type === 'activity' && incompleteTitles.includes(t
       const deadline = new Date(task.deadline);
       const days = [];
 
-      // Saml ledige timer per dag
       for (let d = new Date(); d <= deadline; d.setDate(d.getDate() + 1)) {
         const dateStr = getDateString(d);
         const dayStart = new Date(`${dateStr}T00:00`);
         const lektieStart = new Date(`${dateStr}T15:30`);
         const lektieEnd = new Date(`${dateStr}T${sleepTime < 10 ? '0' : ''}${sleepTime}:00`);
 
-        // Find alle aktiviteter samme dag
         const dailyBlocks = tasks
           .filter(t => t.type === 'activity' &&
             new Date(t.start).toDateString() === d.toDateString())
@@ -223,13 +215,11 @@ tasks = tasks.filter(t => !(t.type === 'activity' && incompleteTitles.includes(t
             end: new Date(t.end)
           }));
 
-        // Tilføj skole som blok
         dailyBlocks.push({
           start: new Date(`${dateStr}T08:00`),
           end: new Date(`${dateStr}T15:30`)
         });
 
-        // Sorter og beregn fritid mellem 15:30 og 22:00
         dailyBlocks.sort((a, b) => a.start - b.start);
 
         const freeSlots = [];
@@ -261,7 +251,6 @@ tasks = tasks.filter(t => !(t.type === 'activity' && incompleteTitles.includes(t
         days.push({ date: new Date(d), freeSlots, availableMinutes });
       }
 
-      // Fordel timer over dagene
       const totalMinutesNeeded = task.hours * 60;
       const totalFree = days.reduce((sum, d) => sum + d.availableMinutes, 0);
 
@@ -282,7 +271,7 @@ tasks = tasks.filter(t => !(t.type === 'activity' && incompleteTitles.includes(t
           const slotMinutes = (slot.end - slot.start) / (1000 * 60);
           const used = Math.min(slotMinutes, toAssign);
 
-          if (used >= 15) { // minimum blok på 15 min
+          if (used >= 15) {
             const start = new Date(slot.start);
             const end = new Date(start.getTime() + used * 60 * 1000);
 
