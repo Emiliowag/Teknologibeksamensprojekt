@@ -19,8 +19,8 @@
     <section id="form-section">
       <h2>Tilføj</h2>
     
-      <label for="entry-type">Type:</label>
-      <select id="entry-type">
+      <label for="event-type">Type:</label>
+      <select id="event-type">
         <option value="task">Opgave</option>
         <option value="activity">Aktivitet</option>
       </select>
@@ -45,7 +45,7 @@
         <input type="time" id="activity-end"><br>
       </div>
     
-      <button onclick="addEntry()">Tilføj</button>
+      <button onclick="addEvent()">Tilføj</button>
     </section>
 
     <section id="task-deadline-list">
@@ -67,7 +67,7 @@
       <label for="modal-hours">Timer brugt:</label>
       <input type="number" id="modal-hours"><br><br>
       <button id="modal-save">Gem</button>
-      <button id="modal-complete">Markér som afleveret</button>
+      <button id="modal-complete">Marker som afleveret</button>
       <button id="modal-close">Luk</button>
     </div>
   </div>

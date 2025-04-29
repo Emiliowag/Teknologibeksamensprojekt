@@ -1,7 +1,7 @@
 let tasks = [];
 
-function addEntry() {
-  const type = document.getElementById('entry-type').value;
+function addEvent() {
+  const type = document.getElementById('event-type').value;
 
   if (type === 'task') {
     const title = document.getElementById('task-title').value;
@@ -58,10 +58,6 @@ function markCompleted(index) {
   renderTaskList();
 }
 
-
-
-
-
 let calendar;
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -84,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   calendar.render();
   renderTaskList();
-  addEntry();
+  addEvent();
   scheduleHomework();
 });
 
@@ -156,13 +152,12 @@ function openModal(index) {
     renderTaskList();
   };
   
-
   document.getElementById('modal-close').onclick = () => {
     modal.classList.add('hidden');
   };
 }
 
-document.getElementById('entry-type').addEventListener('change', function () {
+document.getElementById('event-type').addEventListener('change', function () {
   const isTask = this.value === 'task';
   document.getElementById('task-fields').style.display = isTask ? 'block' : 'none';
   document.getElementById('activity-fields').style.display = isTask ? 'none' : 'block';
